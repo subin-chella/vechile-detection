@@ -1,8 +1,17 @@
 import json
+import os
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
 from typing import Dict, Iterable, List, Optional, Tuple
+
+try:
+    # Optional config to switch between in-memory and file DB
+    from config import USE_IN_MEMORY_DB, DB_FILE_PATH
+except Exception:
+    # Sensible defaults if config is missing
+    USE_IN_MEMORY_DB = True
+    DB_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "outputs", "app.db")
 
 
 SCHEMA_STATEMENTS = [
@@ -55,9 +64,24 @@ SCHEMA_STATEMENTS = [
 
 
 def create_connection() -> sqlite3.Connection:
-    """Return an in-memory SQLite connection using a shared cache."""
-    conn = sqlite3.connect("file:vehicle_detection?mode=memory&cache=shared", uri=True, check_same_thread=False)
+    """Return a SQLite connection (in-memory shared-cache or file-backed based on config)."""
+    if USE_IN_MEMORY_DB:
+        conn = sqlite3.connect(
+            "file:vehicle_detection?mode=memory&cache=shared",
+            uri=True,
+            check_same_thread=False,
+        )
+    else:
+        db_dir = os.path.dirname(DB_FILE_PATH)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
+        conn = sqlite3.connect(DB_FILE_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    # Enforce foreign key constraints for ON DELETE CASCADE, etc.
+    try:
+        conn.execute("PRAGMA foreign_keys = ON")
+    except Exception:
+        pass
     return conn
 
 

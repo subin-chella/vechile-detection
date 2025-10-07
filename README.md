@@ -7,7 +7,7 @@ Streamlit application for end-to-end vehicle detection, tracking, and license pl
 * Streamlit-first experience—launch one app and manage everything from the browser.
 * YOLOv8 + DeepSORT for real-time vehicle tracking with robust plate association.
 * EasyOCR with custom normalization tuned for Indian license formats.
-* Shared-cache, in-memory SQLite storage replaces CSV artifacts for consistent state handling.
+* Persistent SQLite storage replaces CSV artifacts for consistent state handling.
 * Clean overlays that show at most one plate per vehicle and automatically clear when vehicles leave the scene.
 * Outputs (videos, logs, CSV exports for debugging) collected under `outputs/` for easy retrieval.
 
@@ -20,7 +20,7 @@ Streamlit application for end-to-end vehicle detection, tracking, and license pl
 | `processing.py` | Runs YOLOv8 detection, DeepSORT tracking, and stores raw detections in SQLite. |
 | `interpolation.py` | Interpolates missing detections and writes enhanced tracks back into SQLite. |
 | `visualization.py` | Builds overlays and produces the annotated MP4 using DB-backed data. |
-| `database.py` | Creates the in-memory shared SQLite schema and exposes CRUD helpers. |
+| `database.py` | Creates the SQLite schema and exposes CRUD helpers (file-backed by default). |
 | `sort/` | DeepSORT tracker implementation. |
 | `models/` | YOLOv8 weights (`yolov8n.pt`) and the license plate detector (`license_plate_detector.pt`). |
 | `config.py` | Runtime configuration (confidence thresholds, retention windows, etc.). |
@@ -43,6 +43,14 @@ pip install -r requirements.txt
 ```
 
 Ensure the YOLO weights exist in `models/`. If you need to re-download them, consult the links documented in `TECHNICAL_DOCUMENTATION.md`.
+
+### Database Setup (SQLite)
+
+By default, the app uses a persistent SQLite database file at `outputs/app.db`.
+
+You can change this path in `config.py` by editing `DB_FILE_PATH`.
+
+If you prefer an in-memory DB (ephemeral), set `USE_IN_MEMORY_DB = True` in `config.py`.
 
 ## ▶️ Usage
 
@@ -68,7 +76,7 @@ Then:
 2. **Interpolation** – `interpolation.py` fills in missed detections to keep overlays smooth and consistent.
 3. **Visualization** – `visualization.py` reads detections/interpolations from SQLite to draw plate overlays and produce the final MP4.
 
-The database exists in memory (shared-cache mode) for the lifetime of the Streamlit session. Each video upload receives a unique UUID, keeping results isolated even during concurrent sessions.
+The database is file-backed by default and persists across app restarts. Each video upload receives a unique UUID, keeping results isolated even during concurrent sessions.
 
 ## 📦 Outputs
 
@@ -94,7 +102,7 @@ Clean up the folder whenever you want to reclaim disk space.
 * DeepSORT
 * EasyOCR
 * OpenCV
-* SQLite (in-memory, shared-cache)
+* SQLite (file-backed by default; in-memory optional)
 * NumPy / Pandas
 
 For deeper architectural notes, refer to `TECHNICAL_DOCUMENTATION.md`.
